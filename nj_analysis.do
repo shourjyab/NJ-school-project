@@ -3894,7 +3894,6 @@ replace abbott=1 if name=="MILLVILLE" | name=="PEMBERTON TOWNSHIP" | name=="PLEA
 
 generate MaxHS=(100-LessHS)
 generate non_poverty=(100-Poverty)
-
 factor MedianIncome BA MaxHS non_poverty
 predict se_index
 
@@ -3969,6 +3968,103 @@ count if formal_aid==0
 //1071 observations have 0 formula aid
 generate lformalaid=log(formal_aid)
 log close
+
+
+********************************************************************
+********************************************************************
+********************************************************************
+//checking for formal aid- non-formal aid
+
+use nj_sd_fin08-14
+
+generate lf_aid=log(formal_aid)
+generate nlf_aid=log(other_state_rev)
+generate ltot_state_rev=log(tot_state_rev)
+
+generate ltot_enroll=log(tot_enroll)
+generate per_others=100-(per_white+per_black+per_hisp)
+generate lprop_val=log(m_propval)
+generate lPop=log(Population)
+generate Others_cr=100-(White+Black+Hispanic+Asian)
+
+clonevar formula_exp=formal_aid
+replace formula_exp=1 if formal_aid==0
+generate lf_exp=log(formula_exp)
+
+generate abbott=0
+replace abbott=1 if name=="BRIDGETON PUBLIC SCHOOLS" | name=="BURLINGTON CITY SCHOOL DISTRICT"
+replace abbott=1 if name=="CAMDEN CITY PUBLIC SCHOOLS" | name=="GLOUCESTER CITY PUBLIC SCHOOLS" | name=="HARRISON TOWNSHIP"
+replace abbott=1 if name=="MILLVILLE" | name=="PEMBERTON TOWNSHIP" | name=="PLEASANTVILLE" | name=="SALEM CITY" | name=="VINELAND CITY"
+
+generate MaxHS=(100-LessHS)
+generate non_poverty=(100-Poverty)
+factor MedianIncome BA MaxHS non_poverty
+predict se_index
+
+//percentage section 
+keep tot_state_rev formal_aid other_state_rev ltot_state_rev lf_aid nlf_aid
+
+generate match=0
+generate lmatch=0
+
+replace match=1 if tot_state_rev==formal_aid+other_state_rev
+replace lmatch=1 if ltot_state_rev==lf_aid+nlf_aid
+
+count if match==1
+count if lmatch==1
+
+count if formal_aid==0 & other_state_rev>1
+count if formal_aid==0
+
+//marker for formal aid ->markerfl=1 if there is 0 formal aid
+generate markerfl=0
+replace markerfl=1 if formal_aid==0
+
+//regressions for when formal aid is 0 
+
+regress ltot_state_rev south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==1
+
+regress lf_aid south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==1
+
+regress lf_exp south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==1
+
+regress nlf_aid south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==1
+
+//regressions when formal  aid is not zero 
+
+regress ltot_state_rev south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==0
+
+regress lf_aid south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==0
+
+regress south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==0
+
+regress nlf_aid south per_others per_black per_hisp per_frl per_iep per_lep ltot_enroll lprop_val abbott Over65 se_index if markerfl==0
+
+outreg2 using formalaid_inv, excel dec(3) e(all)
+//regressions of dependent variables + south + selected specific variables on the marker fl dummy 
+
+regress ltot_state_rev markerfl
+regress lf_aid markerfl
+regress lf_exp markerfl
+regress nlf_aid markerfl
+regress south markerfl
+regress per_others markerfl
+regress per_black markerfl
+regress per_hisp markerfl
+regress per_frl markerfl 
+regress per_iep markerfl
+regress per_lep markerfl
+regress ltot_enroll markerfl 
+regress lprop_val markerfl
+regress abbott markerfl
+regress Over65 markerfl
+
+
+outreg2 using marketfl_inv, excel dec(3) e(all)
+
+
+
+
 
 
 
